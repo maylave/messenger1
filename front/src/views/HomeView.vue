@@ -22,7 +22,6 @@ const chats: Chat[] = [
     <Leftbar :items="chats" />
 
     <div class="flex-1 flex flex-col min-w-0">
-      
       <Main />
     </div>
   </div>

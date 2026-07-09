@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import ChatMessage from '@/components/ChatMessage.vue'
+import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/UI/ChatInput.vue'
 import type { Chat } from '@/types/chat'
-import { nextTick, ref } from 'vue'
+import { nextTick, ref, onBeforeUnmount } from 'vue'
 import InputLoadFile from '../UI/InputLoadFile.vue'
 
 interface Message {
@@ -62,25 +62,33 @@ const processFiles = async (files: FileList | File[]) => {
     else if (file.type.startsWith('audio/')) fileType = 'audio'
     else if (file.type.includes('pdf') || file.type.includes('document')) fileType = 'document'
 
-    const fileSize = file.size < 1024 * 1024 
-      ? `${(file.size / 1024).toFixed(1)} KB`
-      : `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+    const fileSize =
+      file.size < 1024 * 1024
+        ? `${(file.size / 1024).toFixed(1)} KB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+
+    // ✅ СОЗДАЁМ URL для файла
+    const fileUrl = URL.createObjectURL(file)
 
     messages.value.push({
       id: Date.now() + Math.random(),
       fileName: file.name,
       fileType,
       fileSize,
+      fileUrl, // ✅ ПЕРЕДАЁМ URL
       timestamp: new Date(),
     })
   }
-  
+
   await nextTick()
   scrollToBottom()
 }
 
 const handleFilesSelected = (files: File[]) => {
-  console.log('Файлы получены через DnD:', files.map(f => f.name))
+  console.log(
+    'Файлы получены через DnD:',
+    files.map((f) => f.name),
+  )
   processFiles(files)
 }
 
@@ -117,6 +125,15 @@ const scrollToBottom = () => {
   }
 }
 
+// ✅ Очистка URL при размонтировании компонента
+onBeforeUnmount(() => {
+  messages.value.forEach((msg) => {
+    if (msg.fileUrl) {
+      URL.revokeObjectURL(msg.fileUrl)
+    }
+  })
+})
+
 setTimeout(() => {
   scrollToBottom()
 }, 100)
@@ -135,15 +152,8 @@ setTimeout(() => {
     </div>
 
     <!-- Область сообщений -->
-    <div 
-      ref="messagesContainer"
-      class="flex-1 overflow-y-auto p-4 space-y-3"
-    >
-      <ChatMessage 
-        v-for="message in messages" 
-        :key="message.id"
-        :message="message"
-      />
+    <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
 
       <!-- Пустое состояние -->
       <div v-if="messages.length === 0" class="flex items-center justify-center h-full">
@@ -163,30 +173,31 @@ setTimeout(() => {
           class="p-2 text-sky-50 hover:bg-frame-700 rounded-lg transition shrink-0"
           title="Прикрепить файл"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+            />
           </svg>
         </button>
-        
+
         <!-- Скрытый input для файлов -->
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          @change="handleFileUpload"
-          class="hidden"
-        />
-        
+        <input ref="fileInput" type="file" multiple @change="handleFileUpload" class="hidden" />
+
         <!-- Глобальная зона загрузки -->
         <InputLoadFile @files-selected="handleFilesSelected" />
-        
+
         <!-- НОВЫЙ КОМПОНЕНТ ВВОДА С T9 -->
-        <ChatInput 
-          v-model="newMessage"
-          placeholder="Введите сообщение..."
-          @send="sendMessage"
-        />
-        
+        <ChatInput v-model="newMessage" placeholder="Введите сообщение..." @send="sendMessage" />
+
         <!-- Кнопка отправки -->
         <button
           @click="sendMessage"
