@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+    /* Светлый голубой фон (основа) */
+    --color-sky-50: #e8f8fc;
+    --color-sky-100: #d4f1f9;
+    --color-sky-200: #b3e5f3;
+    --color-sky-300: #7dd3ea;
+    --color-sky-400: #38bfe0;
+    --color-sky-500: #0ea5c9;
+    --color-sky-600: #0284a8;
+    --color-sky-700: #03698a;
+    --color-sky-800: #075985;
+    --color-sky-900: #0c4a6e;
+
+    /* Тёмный серо-синий каркас */
+    --color-frame-950: #1e293b;
+    --color-frame-900: #2d3a4f;
+    --color-frame-800: #3d4a63;
+    --color-frame-700: #4a5873;
+    --color-frame-600: #5c6a85;
+
+    /* Тёплый акцент (чтобы разбавить холод) */
+    --color-amber-400: #fbbf24;
+    --color-amber-500: #f59e0b;
+    --color-rose-500: #f43f5e;
+}
