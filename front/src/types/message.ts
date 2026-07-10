@@ -1,3 +1,4 @@
+// types/message.ts
 import type { Component } from 'vue'
 
 export type FileKind = 'image' | 'svg' | 'document' | 'video' | 'audio' | 'other'
@@ -6,10 +7,10 @@ export interface Message {
   id: number
   text?: string
   fileName?: string
-  fileType?: FileKind
-  fileMime?: string
+  fileType?: FileKind // ✅ Используем统一的 тип
   fileSize?: string
   fileUrl?: string
+  textContent?: string
   timestamp: Date
 }
 

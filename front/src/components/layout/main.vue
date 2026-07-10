@@ -2,16 +2,19 @@
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/UI/ChatInput.vue'
 import type { Chat } from '@/types/chat'
-import { nextTick, ref, onBeforeUnmount } from 'vue'
+// ✅ Импортируем FileKind, чтобы типы совпадали с остальным приложением
+import type { FileKind } from '@/types/message'
+import { nextTick, onBeforeUnmount, ref } from 'vue'
 import InputLoadFile from '../UI/InputLoadFile.vue'
 
 interface Message {
   id: number
   text?: string
   fileName?: string
-  fileType?: 'image' | 'document' | 'video' | 'audio' | 'other'
+  fileType?: FileKind // ✅ Используем унифицированный тип
   fileSize?: string
   fileUrl?: string
+  textContent?: string // ✅ Поле для хранения прочитанного текста
   timestamp: Date
 }
 
@@ -51,12 +54,22 @@ const newMessage = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
+// ✅ Функция для чтения текстового содержимого файла
+const readTextFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsText(file, 'UTF-8')
+  })
+}
+
 // --- ЕДИНАЯ ЛОГИКА ОБРАБОТКИ ФАЙЛОВ ---
 const processFiles = async (files: FileList | File[]) => {
   if (!files || files.length === 0) return
 
   for (const file of Array.from(files)) {
-    let fileType: Message['fileType'] = 'other'
+    let fileType: FileKind = 'other'
     if (file.type.startsWith('image/')) fileType = 'image'
     else if (file.type.startsWith('video/')) fileType = 'video'
     else if (file.type.startsWith('audio/')) fileType = 'audio'
@@ -67,15 +80,30 @@ const processFiles = async (files: FileList | File[]) => {
         ? `${(file.size / 1024).toFixed(1)} KB`
         : `${(file.size / (1024 * 1024)).toFixed(1)} MB`
 
-    // ✅ СОЗДАЁМ URL для файла
     const fileUrl = URL.createObjectURL(file)
+    
+    // ✅ Читаем текст только для подходящих типов файлов
+    let content: string | undefined
+    const isTextFile = 
+      file.type.startsWith('text/') || 
+      file.name.match(/\.(txt|md|json|csv|log|xml|html|css|js|ts|vue)$/i)
+    
+    // Ограничиваем размер читаемых файлов (например, до 1MB), чтобы не вешать браузер
+    if (isTextFile && file.size < 1024 * 1024) {
+      try {
+        content = await readTextFile(file)
+      } catch (e) {
+        console.error('Ошибка чтения файла:', e)
+      }
+    }
 
     messages.value.push({
       id: Date.now() + Math.random(),
       fileName: file.name,
       fileType,
       fileSize,
-      fileUrl, // ✅ ПЕРЕДАЁМ URL
+      fileUrl,
+      textContent: content, // ✅ Сохраняем прочитанный текст
       timestamp: new Date(),
     })
   }
@@ -85,10 +113,6 @@ const processFiles = async (files: FileList | File[]) => {
 }
 
 const handleFilesSelected = (files: File[]) => {
-  console.log(
-    'Файлы получены через DnD:',
-    files.map((f) => f.name),
-  )
   processFiles(files)
 }
 
@@ -96,7 +120,7 @@ const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement
   if (input.files) {
     processFiles(input.files)
-    input.value = ''
+    input.value = '' // Сброс input, чтобы можно было загрузить тот же файл повторно
   }
 }
 
@@ -125,7 +149,6 @@ const scrollToBottom = () => {
   }
 }
 
-// ✅ Очистка URL при размонтировании компонента
 onBeforeUnmount(() => {
   messages.value.forEach((msg) => {
     if (msg.fileUrl) {
@@ -195,7 +218,7 @@ setTimeout(() => {
         <!-- Глобальная зона загрузки -->
         <InputLoadFile @files-selected="handleFilesSelected" />
 
-        <!-- НОВЫЙ КОМПОНЕНТ ВВОДА С T9 -->
+        <!-- Поле ввода -->
         <ChatInput v-model="newMessage" placeholder="Введите сообщение..." @send="sendMessage" />
 
         <!-- Кнопка отправки -->

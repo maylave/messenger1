@@ -1,19 +1,31 @@
 <script lang="ts" setup>
-import { computed, toRef } from 'vue'
 import ColorPalette from '@/components/chat/ColorPalette.vue'
-import MessageTags from '@/components/chat/MessageTags.vue'
 import MessageColorSwatches from '@/components/chat/MessageColorSwatches.vue'
+import MessageTags from '@/components/chat/MessageTags.vue'
 import FileAttachment from '@/components/chat/files/FileAttachment.vue'
-import { useMessageContent } from '@/composables/useMessageContent'
+import { useFileContent, useMessageContent } from '@/composables/useMessageContent'
 import { DEFAULT_BUBBLE_CLASS } from '@/config/tagConfig'
 import type { Message } from '@/types/message'
+import { computed, toRef } from 'vue'
 
 const props = defineProps<{ message: Message }>()
 
 const textRef = toRef(props.message, 'text')
 const { detectedTags, priorityTag, detectedColors, cleanText } = useMessageContent(textRef)
 
-const bubbleClass = computed(() => priorityTag.value?.bubbleClass ?? DEFAULT_BUBBLE_CLASS)
+// ✅ Обрабатываем содержимое файла отдельно
+const fileContentRef = toRef(props.message, 'textContent')
+const { 
+  detectedTags: fileTags, 
+  priorityTag: filePriorityTag, 
+  detectedColors: fileColors, 
+  cleanContent 
+} = useFileContent(fileContentRef)
+
+const bubbleClass = computed(() => {
+  // Приоритет тега из основного текста или из файла
+  return priorityTag.value?.bubbleClass ?? filePriorityTag.value?.bubbleClass ?? DEFAULT_BUBBLE_CLASS
+})
 
 const isColorPaletteOnly = computed(
   () => detectedColors.value.length > 0 && !props.message.fileName && cleanText.value.length === 0,
@@ -71,25 +83,32 @@ const copyToClipboard = async (text: string) => {
       class="max-w-[70%] px-4 py-2 rounded-lg rounded-br-none relative transition-all duration-300 text-white"
       :class="bubbleClass"
     >
+      <!-- Теги из основного текста -->
       <MessageTags v-if="detectedTags.length > 0" :tags="detectedTags" variant="inline" />
 
+      <!-- Основной текст сообщения -->
       <div v-if="cleanText" class="text-sm whitespace-pre-wrap break-words">
         {{ cleanText }}
       </div>
 
+      <!-- Цвета из основного текста -->
       <MessageColorSwatches
         v-if="detectedColors.length > 0"
         :colors="detectedColors"
         @copy="copyToClipboard"
       />
 
+      <!-- ✅ Файл с обработанным содержимым -->
       <FileAttachment
-        v-if="message.fileName"
-        :file-name="message.fileName"
-        :file-type="message.fileType ?? 'other'"
-        :file-size="message.fileSize"
-        :file-url="message.fileUrl"
-      />
+  v-if="message.fileName"
+  :file-name="message.fileName"
+  :file-type="message.fileType ?? 'other'"
+  :file-size="message.fileSize"
+  :file-url="message.fileUrl"
+  :text-content="message.textContent"   
+  :file-tags="fileTags"                  
+  :file-colors="fileColors"              
+/>
 
       <p class="text-xs mt-2 opacity-60 text-right select-none">
         {{ formatTime(message.timestamp) }}
@@ -97,7 +116,6 @@ const copyToClipboard = async (text: string) => {
     </div>
   </div>
 </template>
-
 <style>
 .animate-pulse-important {
   animation: pulse-important 2s ease-in-out infinite;
