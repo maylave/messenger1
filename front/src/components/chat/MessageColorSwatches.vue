@@ -15,7 +15,7 @@ const emit = defineEmits<{ copy: [color: string] }>()
         class="w-4 h-4 rounded-full shadow-sm border border-white/20"
         :style="{ backgroundColor: color }"
       ></div>
-      <span class="text-[10px] font-mono opacity-90">{{ color }}</span>
+      <span class="text-[10px] font-mono opacity-90 text-white">{{ color }}</span>
     </div>
   </div>
 </template>

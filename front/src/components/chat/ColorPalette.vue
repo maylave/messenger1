@@ -9,7 +9,7 @@ const emit = defineEmits<{
   copy: [color: string]
 }>()
 
-// computed вместо обычной функции — пересчитывается только при изменении colors
+
 const height = computed(() => {
   const baseHeight = 280
   const extraColors = Math.max(0, props.colors.length - 4)
