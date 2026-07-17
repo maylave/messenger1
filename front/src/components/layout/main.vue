@@ -322,11 +322,11 @@ setTimeout(() => {
     </div>
 
     <!-- Header -->
-    <div class="absolute inset-x-0 top-0 flex justify-center pt-4 z-20">
-      <Header title="test" class="w-full max-w-[min(64rem,calc(100%-2rem))] rounded-4xl" />
+    <div class="absolute inset-x-0 top-0 flex justify-center pt-4 z-20 pointer-events-none">
+      <Header title="test" class="w-full max-w-[min(64rem,calc(100%-2rem))] rounded-4xl pointer-events-auto" />
     </div>
 
-    <!-- Кнопка смены фона (временная) -->
+    <!-- Кнопка смены фона -->
     <div class="absolute top-20 right-4 z-30">
       <button
         @click="isBgMenuOpen = !isBgMenuOpen"
@@ -418,13 +418,24 @@ setTimeout(() => {
       </div>
     </div>
 
-    <!-- Контейнер сообщений -->
-    <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3 h-full relative z-10">
-      <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
-
-      <div v-if="messages.length === 0" class="flex items-center justify-center h-full">
-        <div class="text-center text-sky-50/40">
-          <p class="text-sm">Здесь будут ваши заметки и файлы</p>
+    <!-- 
+      КОНТЕЙНЕР СООБЩЕНИЙ (ИЗМЕНЕНО)
+      - justify-end: прижимает контент к низу
+      - min-h-0: критически важен для корректной работы скролла внутри flex-контейнера
+    -->
+    <div 
+      ref="messagesContainer" 
+      class="flex-1 overflow-y-auto    relative z-10 flex flex-col  justify-end min-h-0 pb-10 m-20"
+    >
+      <!-- Обертка для сообщений -->
+      <div class="flex flex-col gap-3 w-full max-w-5xl ">
+        <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
+        
+        <!-- Пустое состояние -->
+        <div v-if="messages.length === 0" class="flex items-center justify-center py-10 opacity-50">
+          <div class="text-center text-sky-50/40">
+            <p class="text-sm">Здесь будут ваши заметки и файлы</p>
+          </div>
         </div>
       </div>
     </div>

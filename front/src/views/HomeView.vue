@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
 import Leftbar from '@/components/layout/leftbar.vue'
 import Main from '@/components/layout/main.vue'
 import type { Chat } from '@/types/chat'
+import { ref } from 'vue'
 
 // Объявляем данные
 const chats: Chat[] = [

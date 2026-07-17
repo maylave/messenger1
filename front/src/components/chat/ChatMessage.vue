@@ -108,12 +108,12 @@ const copyToClipboard = async (text: string) => {
       <!-- Градиентная рамка (внешний слой) -->
       <div class="message-border">
         <!-- Основной контент -->
-        <div class="message-content px-5 py-4">
+        <div class="message-content ">
           <!-- Теги -->
           <MessageTags v-if="detectedTags.length > 0" :tags="detectedTags" variant="inline" />
 
           <!-- Текст -->
-          <div v-if="cleanText" class="message-text whitespace-pre-wrap break-words">
+          <div v-if="cleanText" class="message-text whitespace-pre-wrap break-words p-4">
             {{ cleanText }}
           </div>
 
@@ -139,7 +139,7 @@ const copyToClipboard = async (text: string) => {
           />
 
           <!-- Время -->
-          <div class="message-time">
+          <div class="message-time  ">
             <span class="time-text">{{ formatTime(message.timestamp) }}</span>
           </div>
         </div>
@@ -152,10 +152,7 @@ const copyToClipboard = async (text: string) => {
 </template>
 
 <style scoped>
-/* ============================================
-   MODERN MESSAGE BUBBLE DESIGN
-   Glassmorphism + Gradient Border Glow
-   ============================================ */
+
 
 .message-bubble {
   position: relative;
@@ -211,7 +208,7 @@ const copyToClipboard = async (text: string) => {
 .message-content {
   position: relative;
   border-radius: 1.2rem 1.2rem 1.2rem 0.2rem;
-  background: linear-gradient(135deg, rgba(18, 33, 49, 0.95) 0%, rgba(28, 43, 60, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(18, 33, 49, 0.55) 0%, rgba(28, 43, 60, 0.6) 100%);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
@@ -226,11 +223,14 @@ const copyToClipboard = async (text: string) => {
 
 /* Время сообщения */
 .message-time {
-  margin-top: 0.75rem;
+  margin-top: 0.25rem;
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  width: 95%;
   gap: 0.5rem;
+  bottom: 4px;
+  position: absolute;
 }
 
 .time-text {
