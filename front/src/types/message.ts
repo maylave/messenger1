@@ -7,7 +7,7 @@ export interface Message {
   id: number
   text?: string
   fileName?: string
-  fileType?: FileKind // ✅ Используем统一的 тип
+  fileType?: FileKind
   fileSize?: string
   fileUrl?: string
   textContent?: string
@@ -28,4 +28,17 @@ export interface TagRule {
 
 export interface TagMatch extends TagRule {
   raw: string
+}
+
+export interface ChatBackground {
+  id: string
+  name: string
+  type: 'solid' | 'gradient' | 'pattern' | 'image'
+  value: string
+  preview?: string
+}
+
+export interface Chat {
+  id: number
+  title: string
 }

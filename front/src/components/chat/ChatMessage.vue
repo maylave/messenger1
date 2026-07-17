@@ -108,7 +108,7 @@ const copyToClipboard = async (text: string) => {
       <!-- Градиентная рамка (внешний слой) -->
       <div class="message-border">
         <!-- Основной контент -->
-        <div class="message-content ">
+        <div class="message-content">
           <!-- Теги -->
           <MessageTags v-if="detectedTags.length > 0" :tags="detectedTags" variant="inline" />
 
@@ -139,7 +139,7 @@ const copyToClipboard = async (text: string) => {
           />
 
           <!-- Время -->
-          <div class="message-time  ">
+          <div class="message-time">
             <span class="time-text">{{ formatTime(message.timestamp) }}</span>
           </div>
         </div>
@@ -152,8 +152,6 @@ const copyToClipboard = async (text: string) => {
 </template>
 
 <style scoped>
-
-
 .message-bubble {
   position: relative;
   animation: message-appear 0.3s ease-out;

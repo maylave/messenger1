@@ -42,7 +42,7 @@ const activateSearch = () => {
       <div class="relative flex-1 flex justify-end pr-10 gap-4">
         <div
           @click="activateSearch"
-          class="liquid-glass flex items-center gap-2 h-10 px-2.5 rounded-full border backdrop-blur-xl overflow-hidden transition-all duration-300 ease-out cursor-text"
+          class="liquid-glass flex items-center gap-2 h-12 px-2.5 rounded-full border backdrop-blur-xl overflow-hidden transition-all duration-300 ease-out cursor-text"
           :class="[
             isExpanded() ? 'w-100 pr-3' : 'w-25',
             isSearchFocused
