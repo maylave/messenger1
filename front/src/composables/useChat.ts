@@ -1,22 +1,27 @@
-import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type Ref } from 'vue'
-import type { Chat, ChatBackground, FileKind, Message } from '@/types/message'
+// composables/useChat.ts
 import { availableBackgrounds } from '@/config/chatBackgrounds'
+import type { Chat, ChatBackground, FileKind, Message } from '@/types/message'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 export function useChat(props: { chat?: Chat }) {
   // --- Состояние ---
   const messages = ref<Message[]>([])
   const newMessage = ref('')
   const messagesContainer = ref<HTMLElement | null>(null)
-
   const fileInput = ref<HTMLInputElement | null>(null)
   const imageInput = ref<HTMLInputElement | null>(null)
   const bgInput = ref<HTMLInputElement | null>(null)
-
   const isRecording = ref(false)
   const isFocused = ref(false)
   const isBgMenuOpen = ref(false)
-
-  const currentBackground = ref<ChatBackground>(availableBackgrounds[0])
+  const currentBackground = ref<ChatBackground>(
+    availableBackgrounds[0] ?? {
+      id: 'default',
+      name: 'По умолчанию',
+      type: 'solid',
+      value: '#0f172a',
+    },
+  )
   const customImageBackground = ref<string | null>(null)
 
   // --- Утилиты ---
@@ -37,7 +42,8 @@ export function useChat(props: { chat?: Chat }) {
 
   // --- Логика файлов ---
   const processFiles = async (files: FileList | File[]) => {
-    if (!files || files.length === 0) return
+    // ИСПРАВЛЕНИЕ 1: Безопасная проверка чата
+    if (!files || files.length === 0 || !props.chat?.id) return
 
     for (const file of Array.from(files)) {
       let fileType: FileKind = 'other'
@@ -66,7 +72,8 @@ export function useChat(props: { chat?: Chat }) {
         }
       }
 
-      messages.value.push({
+      // ИСПРАВЛЕНИЕ 2: Явное приведение типа для временного сообщения
+      const tempMessage: Message = {
         id: Date.now() + Math.random(),
         fileName: file.name,
         fileType,
@@ -74,7 +81,26 @@ export function useChat(props: { chat?: Chat }) {
         fileUrl,
         textContent: content,
         timestamp: new Date(),
-      })
+      } as Message
+
+      messages.value.unshift(tempMessage)
+
+      // Отправка в БД (только если API доступен)
+      if (typeof window !== 'undefined' && window.api) {
+        try {
+          await window.api.sendMessage({
+            chatId: String(props.chat.id),
+            senderId: 'current-user-id',
+            fileName: file.name,
+            fileType,
+            fileSize,
+            fileUrl: '',
+            textContent: content,
+          })
+        } catch (error) {
+          console.error('Ошибка сохранения файла:', error)
+        }
+      }
     }
 
     await nextTick()
@@ -100,26 +126,48 @@ export function useChat(props: { chat?: Chat }) {
     }
   }
 
+  // --- Отправка сообщений ---
   const sendMessage = async () => {
     const text = newMessage.value.trim()
-    if (!text) return
-
-    messages.value.push({
-      id: Date.now(),
-      text,
-      timestamp: new Date(),
-    })
+    if (!text || !props.chat?.id) return
 
     newMessage.value = ''
-    await nextTick()
-    scrollToBottom()
+
+    // ИСПРАВЛЕНИЕ 3: Проверка наличия Electron API
+    if (typeof window !== 'undefined' && window.api) {
+      try {
+        const result = await window.api.sendMessage({
+          chatId: String(props.chat.id),
+          senderId: 'current-user-id',
+          text: text,
+        })
+
+        if (result.success && result.data) {
+          messages.value.unshift(result.data)
+          await nextTick()
+          scrollToBottom()
+        } else {
+          console.error('Ошибка сохранения сообщения:', result.error)
+        }
+      } catch (error) {
+        console.error('IPC ошибка при отправке:', error)
+      }
+    } else {
+      // Фолбэк для веб-режима или тестов
+      messages.value.unshift({
+        id: Date.now(),
+        text,
+        timestamp: new Date(),
+      } as Message)
+      await nextTick()
+      scrollToBottom()
+    }
   }
 
   // --- Управление фоном ---
   const selectBackground = (bg: ChatBackground) => {
     currentBackground.value = bg
     localStorage.setItem('chat-background-id', bg.id)
-
     if (bg.type !== 'image') {
       customImageBackground.value = null
       localStorage.removeItem('chat-custom-image')
@@ -128,9 +176,7 @@ export function useChat(props: { chat?: Chat }) {
   }
 
   const triggerBgUpload = () => {
-    if (bgInput.value) {
-      bgInput.value.click()
-    }
+    if (bgInput.value) bgInput.value.click()
   }
 
   const handleBgUpload = (event: Event) => {
@@ -141,14 +187,12 @@ export function useChat(props: { chat?: Chat }) {
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string
         customImageBackground.value = imageUrl
-
         currentBackground.value = {
           id: 'custom-image',
           name: 'Моё фото',
           type: 'image',
           value: imageUrl,
         }
-
         localStorage.setItem('chat-background-id', 'custom-image')
         localStorage.setItem('chat-custom-image', imageUrl)
       }
@@ -181,20 +225,29 @@ export function useChat(props: { chat?: Chat }) {
 
   // --- Watchers и Lifecycle ---
   watch(
-    () => props.chat,
-    (newChat) => {
-      if (newChat) {
-        messages.value = [
-          {
-            id: Date.now(),
-            text: `Вы открыли чат "${newChat.title}". Начните общение!`,
-            timestamp: new Date(),
-          },
-        ]
+    () => props.chat?.id,
+    async (newChatId) => {
+      if (newChatId && typeof window !== 'undefined' && window.api) {
+        try {
+          const result = await window.api.getMessages(String(newChatId))
+          if (result.success && result.data) {
+            messages.value = result.data
+            await nextTick()
+            scrollToBottom()
+          }
+        } catch (error) {
+          console.error('Ошибка загрузки сообщений:', error)
+          messages.value = [
+            {
+              id: Date.now(),
+              text: `Вы открыли чат "${props.chat?.title}". Начните общение!`,
+              timestamp: new Date(),
+            } as Message,
+          ]
+        }
       } else {
         messages.value = []
       }
-      nextTick(() => scrollToBottom())
     },
     { immediate: true },
   )
@@ -220,11 +273,13 @@ export function useChat(props: { chat?: Chat }) {
 
   onBeforeUnmount(() => {
     messages.value.forEach((msg) => {
-      if (msg.fileUrl) URL.revokeObjectURL(msg.fileUrl)
+      if (msg.fileUrl && msg.fileUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(msg.fileUrl)
+      }
     })
   })
 
-  // --- Возвращаем всё, что нужно шаблону ---
+  // --- Возвращаем реактивное состояние ---
   return reactive({
     messages,
     newMessage,
