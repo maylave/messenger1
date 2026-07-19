@@ -2,7 +2,7 @@
 import Leftbar from '@/components/layout/leftbar.vue'
 import Main from '@/components/layout/main.vue'
 import HistoryList from '@/components/History/HistoryList.vue'
-import type { Chat } from '@/types/chat'
+import type { Chat } from '@/types/message'
 import type { HistoryItem as HistoryItemType } from '@/types/history'
 import { ref, computed, onUnmounted } from 'vue'
 

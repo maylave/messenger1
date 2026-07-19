@@ -42,7 +42,7 @@ export function useChat(props: { chat?: Chat }) {
 
   // --- Логика файлов ---
   const processFiles = async (files: FileList | File[]) => {
-    // ИСПРАВЛЕНИЕ 1: Безопасная проверка чата
+    // Безопасная проверка чата
     if (!files || files.length === 0 || !props.chat?.id) return
 
     for (const file of Array.from(files)) {
@@ -57,6 +57,7 @@ export function useChat(props: { chat?: Chat }) {
           ? `${(file.size / 1024).toFixed(1)} KB`
           : `${(file.size / (1024 * 1024)).toFixed(1)} MB`
 
+      // Временный локальный URL — используется, пока файл не сохранён на диск
       const fileUrl = URL.createObjectURL(file)
 
       let content: string | undefined
@@ -72,7 +73,7 @@ export function useChat(props: { chat?: Chat }) {
         }
       }
 
-      // ИСПРАВЛЕНИЕ 2: Явное приведение типа для временного сообщения
+      // Явное приведение типа для временного сообщения
       const tempMessage: Message = {
         id: Date.now() + Math.random(),
         fileName: file.name,
@@ -83,20 +84,34 @@ export function useChat(props: { chat?: Chat }) {
         timestamp: new Date(),
       } as Message
 
-      messages.value.unshift(tempMessage)
+      // Добавляем в конец — новые сообщения снизу
+      messages.value.push(tempMessage)
 
-      // Отправка в БД (только если API доступен)
+      // Сохранение файла на диск + запись сообщения в БД (только если API доступен)
       if (typeof window !== 'undefined' && window.api) {
         try {
-          await window.api.sendMessage({
+          const arrayBuffer = await file.arrayBuffer()
+
+          const result = await window.api.saveFile({
             chatId: String(props.chat.id),
-            senderId: 'current-user-id',
             fileName: file.name,
+            buffer: arrayBuffer,
             fileType,
             fileSize,
-            fileUrl: '',
             textContent: content,
           })
+
+          if (result.success && result.data) {
+            // Заменяем временное сообщение (с blob: url) на реальное из БД
+            // (с постоянным путём к файлу на диске)
+            const idx = messages.value.findIndex((m) => m.id === tempMessage.id)
+            if (idx !== -1) {
+              URL.revokeObjectURL(fileUrl)
+              messages.value[idx] = result.data
+            }
+          } else {
+            console.error('Ошибка сохранения файла:', result.error)
+          }
         } catch (error) {
           console.error('Ошибка сохранения файла:', error)
         }
@@ -133,7 +148,7 @@ export function useChat(props: { chat?: Chat }) {
 
     newMessage.value = ''
 
-    // ИСПРАВЛЕНИЕ 3: Проверка наличия Electron API
+    // Проверка наличия Electron API
     if (typeof window !== 'undefined' && window.api) {
       try {
         const result = await window.api.sendMessage({
@@ -143,7 +158,8 @@ export function useChat(props: { chat?: Chat }) {
         })
 
         if (result.success && result.data) {
-          messages.value.unshift(result.data)
+          // Добавляем в конец — новое сообщение снизу
+          messages.value.push(result.data)
           await nextTick()
           scrollToBottom()
         } else {
@@ -154,7 +170,7 @@ export function useChat(props: { chat?: Chat }) {
       }
     } else {
       // Фолбэк для веб-режима или тестов
-      messages.value.unshift({
+      messages.value.push({
         id: Date.now(),
         text,
         timestamp: new Date(),
@@ -231,6 +247,8 @@ export function useChat(props: { chat?: Chat }) {
         try {
           const result = await window.api.getMessages(String(newChatId))
           if (result.success && result.data) {
+            // Важно: getMessages должен возвращать сообщения в хронологическом
+            // порядке (от старых к новым) — иначе список будет перевёрнут
             messages.value = result.data
             await nextTick()
             scrollToBottom()

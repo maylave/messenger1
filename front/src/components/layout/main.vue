@@ -18,7 +18,7 @@ const chatLogic: ChatLogic = useChat(props)
 </script>
 
 <template>
-  <div class="h-full w-full flex flex-col relative">
+  <div class="h-full w-full flex flex-col relative min-h-0">
     <!-- Фон чата -->
     <div
       class="absolute inset-0 transition-all duration-500"
@@ -134,12 +134,13 @@ const chatLogic: ChatLogic = useChat(props)
     </div>
 
     <!-- Контейнер сообщений -->
+    <!-- Контейнер сообщений -->
     <div
       ref="messagesContainer"
-      class="flex-1 overflow-y-auto relative z-10 flex flex-col justify-end min-h-0 pb-10 m-20"
+      class="flex-1 overflow-y-auto relative z-10 min-h-0 px-20 pb-32 pt-24"
     >
-      <!-- Обертка для сообщений -->
-      <div class="flex flex-col gap-3 w-full max-w-5xl mx-auto">
+      <!-- Обертка для сообщений: mt-auto прижимает всё к низу, когда контента мало -->
+      <div class="flex flex-col gap-3 w-full max-w-5xl mx-auto mt-auto">
         <ChatMessage v-for="message in chatLogic.messages" :key="message.id" :message="message" />
 
         <!-- Пустое состояние -->

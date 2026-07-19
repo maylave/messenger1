@@ -1,3 +1,4 @@
+// electron.vite.config.ts
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { resolve } from 'path'
 // Импортируем ваш основной конфиг
@@ -15,8 +16,20 @@ export default defineConfig({
     },
   },
 
-  // Отключаем preload, если он не нужен
-  preload: false,
+  preload: {
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'electron/preload.ts'),
+        },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+        },
+      },
+    },
+  },
 
   // Явно наследуем настройки из vite.config.ts
   renderer: {
